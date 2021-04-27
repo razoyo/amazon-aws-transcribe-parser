@@ -1,0 +1,15 @@
+{
+  "name": "transcribe_reader",
+  "version": "1.0.0",
+  "description": "For outputting AWS transcribe files in readable format",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "/usr/local/bin/repos/transcribe_reader/.git/"
+  },
+  "author": "Paul Byrne",
+  "license": "MIT"
+}
