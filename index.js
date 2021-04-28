@@ -3,9 +3,7 @@ const fs = require('fs');
 const fileStream = fs.createReadStream(process.argv[2]);
 const outputStream = fs.createWriteStream(process.argv[2] + "_out.txt");
 
-var fullDoc = "";
-var newline = true;
-
+// FUNCTION DEFINITIONS
 function punctuation(item) {
   let punctuation = item.alternatives[0].content;
   if (punctuation === "." || punctuation === "?") {
@@ -16,9 +14,48 @@ function punctuation(item) {
   }
 }
 
+function getStamp(item) {
+  let time_minutes = Math.floor(item.start_time / 60); 
+  let time_seconds = Math.floor(item.start_time % 60); 
+  return ( time_minutes + ":" + time_seconds + " | " );
+}
+
+function getSpeaker(speakers, item) {
+  if (!speakers.filter( speaker => speaker.start_time === item.start_time )[0]) {
+    return "unk";
+  } else {
+    return speakers.filter( speaker => speaker.start_time === item.start_time )[0].speaker_label;
+  }
+}
+
+function getOutput(item, time_stamp, prior_speaker, speaker) {
+  let out = ""
+  let content = item.alternatives[0].content
+  
+  if (prior_speaker != speaker) { out += "\n" + speaker + " : "  + time_stamp + "\n" }
+
+  if (item.alternatives.length > 1) {
+    const suss_alternatives = function (acc, curr) { return (acc + ", " + curr)}; 
+
+    alternative_matches = item.alternatives.slice(1).reduce(suss_alternatives);
+    
+    content = item.alternatives[0].content + "(" + alternative_matches + ")"; 
+  }   
+
+  out += content + qualifier + " ";
+
+  return out
+}
+
+
+// FLOW CONTROL
+var fullDoc = "";
+var newline = true;
+
 fileStream.on('data', (chunk) => {
   fullDoc += chunk.toString();
 });
+
 
 fileStream.on('end', () => {
   
@@ -30,10 +67,7 @@ fileStream.on('end', () => {
 
   items.forEach( item => {
 
-    let output = "";
-    let qualifier = "";
-    let endline = "";
-    let time_stamp = "";
+    let output = qualifier = endline = time_stamp = "";
 
     if (item.type === "punctuation") {
       output = punctuation(item);
@@ -42,29 +76,18 @@ fileStream.on('end', () => {
       if (parseFloat(item.alternatives[0].confidence) < 0.90) { qualifier = "*" }
 
       if ( newline ) { 
-        let time_minutes = Math.floor(item.start_time / 60); 
-        let time_seconds = Math.floor(item.start_time % 60); 
-        time_stamp = time_minutes + ":" + time_seconds + " | ";
+        time_stamp = getStamp(item);
+        speaker = getSpeaker(speakers, item);
 
-        if (!speakers.filter( speaker => speaker.start_time === item.start_time )[0]) {
-          speaker = "unk";
-        } else {
-          speaker = speakers.filter( speaker => speaker.start_time === item.start_time )[0].speaker_label;
-        }
-
-      newline = false;
-
+        newline = false;
       }
 
-      if (prior_speaker === speaker) {
-        output = item.alternatives[0].content + qualifier + " "; 
-      } else {
-        output = "\n" + speaker + " : "  + time_stamp + "\n" + item.alternatives[0].content + qualifier + " "; 
-      }
+      output = getOutput(item, time_stamp, prior_speaker, speaker);
 
       prior_speaker = speaker; 
 
     }
+    console.log(output);
     outputStream.write(output);
   });
 console.log('complete');
