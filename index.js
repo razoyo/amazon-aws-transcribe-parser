@@ -4,6 +4,17 @@ const fileStream = fs.createReadStream(process.argv[2]);
 const outputStream = fs.createWriteStream(process.argv[2] + "_out.txt");
 
 var fullDoc = "";
+var newline = true;
+
+function punctuation(item) {
+  let punctuation = item.alternatives[0].content;
+  if (punctuation === "." || punctuation === "?") {
+    newline = true;
+    return (punctuation + "\n");
+  } else {
+    return punctuation;
+  }
+}
 
 fileStream.on('data', (chunk) => {
   fullDoc += chunk.toString();
@@ -16,7 +27,6 @@ fileStream.on('end', () => {
 
   let prior_speaker = "";
   let speaker = "";
-  let newline = true;
 
   items.forEach( item => {
 
@@ -26,13 +36,7 @@ fileStream.on('end', () => {
     let time_stamp = "";
 
     if (item.type === "punctuation") {
-      let punctuation = item.alternatives[0].content;
-      if (punctuation === "." || punctuation === "?") {
-        output = punctuation + "\n";
-        newline = true;
-      } else {
-        output = punctuation;
-      }
+      output = punctuation(item);
 
     } else {
       if (parseFloat(item.alternatives[0].confidence) < 0.90) { qualifier = "*" }
@@ -61,7 +65,7 @@ fileStream.on('end', () => {
       prior_speaker = speaker; 
 
     }
-    console.log(output);
     outputStream.write(output);
   });
+console.log('complete');
 });
